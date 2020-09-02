@@ -18,5 +18,7 @@ namespace Microsoft.Oryx.BuildScriptGenerator.Node
         public string NpmRegistryUrl { get; set; }
 
         public string NodeVersion { get; set; }
+
+        public string YarnVersion { get; set; }
     }
 }

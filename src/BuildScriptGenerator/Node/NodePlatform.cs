@@ -72,6 +72,7 @@ namespace Microsoft.Oryx.BuildScriptGenerator.Node
         private readonly INodePlatformDetector _detector;
         private readonly IEnvironment _environment;
         private readonly NodePlatformInstaller _platformInstaller;
+        private readonly YarnInstaller _yarnInstaller;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="NodePlatform"/> class.
@@ -90,7 +91,8 @@ namespace Microsoft.Oryx.BuildScriptGenerator.Node
             ILogger<NodePlatform> logger,
             INodePlatformDetector detector,
             IEnvironment environment,
-            NodePlatformInstaller nodePlatformInstaller)
+            NodePlatformInstaller nodePlatformInstaller,
+            YarnInstaller yarnInstaller)
         {
             _commonOptions = commonOptions.Value;
             _nodeScriptGeneratorOptions = nodeScriptGeneratorOptions.Value;
@@ -99,6 +101,7 @@ namespace Microsoft.Oryx.BuildScriptGenerator.Node
             _detector = detector;
             _environment = environment;
             _platformInstaller = nodePlatformInstaller;
+            _yarnInstaller = yarnInstaller;
         }
 
         /// <inheritdoc/>
@@ -390,9 +393,16 @@ namespace Microsoft.Oryx.BuildScriptGenerator.Node
         /// <inheritdoc/>
         public void ResolveVersions(PlatformDetectorResult detectorResult)
         {
-            var resolvedVersion = GetVersionUsingHierarchicalRules(detectorResult.PlatformVersion);
-            resolvedVersion = GetMaxSatisfyingVersionAndVerify(resolvedVersion);
-            detectorResult.PlatformVersion = resolvedVersion;
+            var nodePlatformDetectorResult = detectorResult as NodePlatformDetectorResult;
+            if (nodePlatformDetectorResult == null)
+            {
+                throw new ArgumentException(
+                    $"Expected '{nameof(detectorResult)}' argument to be of type " +
+                    $"'{typeof(NodePlatformDetectorResult)}' but got '{detectorResult.GetType()}'.");
+            }
+
+            SetVersionsUsingHierarchicalRules(nodePlatformDetectorResult);
+            SetMaxSatisfyingVersionsAndVerify(resolvedVersion);
         }
 
         /// <inheritdoc/>
@@ -541,45 +551,72 @@ namespace Microsoft.Oryx.BuildScriptGenerator.Node
             }
         }
 
-        private string GetMaxSatisfyingVersionAndVerify(string version)
+        private void SetMaxSatisfyingVersionsAndVerify(NodePlatformDetectorResult nodePlatformDetectorResult)
         {
             var versionInfo = _nodeVersionProvider.GetVersionInfo();
             var maxSatisfyingVersion = SemanticVersionResolver.GetMaxSatisfyingVersion(
-                version,
+                nodePlatformDetectorResult.PlatformVersion,
                 versionInfo.SupportedVersions);
 
             if (string.IsNullOrEmpty(maxSatisfyingVersion))
             {
                 var exception = new UnsupportedVersionException(
                     NodeConstants.PlatformName,
-                    version,
+                    nodePlatformDetectorResult.PlatformVersion,
                     versionInfo.SupportedVersions);
                 _logger.LogError(
                     exception,
-                    $"Exception caught, the version '{version}' is not supported for the Node platform.");
+                    $"Exception caught, the version '{nodePlatformDetectorResult.PlatformVersion}' is not supported " +
+                    $"for the Node platform.");
                 throw exception;
             }
-
-            return maxSatisfyingVersion;
+            
+            nodePlatformDetectorResult.PlatformVersion = maxSatisfyingVersion;
         }
 
-        private string GetVersionUsingHierarchicalRules(string detectedVersion)
+        private void SetVersionsUsingHierarchicalRules(NodePlatformDetectorResult nodePlatformDetectorResult)
         {
-            // Explicitly specified version by user wins over detected version
-            if (!string.IsNullOrEmpty(_nodeScriptGeneratorOptions.NodeVersion))
+            var nodeVersion = GetNodeVersion();
+            var yarnVersion = GetYarnVersion();
+            nodePlatformDetectorResult.PlatformVersion = nodeVersion;
+            nodePlatformDetectorResult.YarnVersion = yarnVersion;
+
+            string GetNodeVersion()
             {
-                return _nodeScriptGeneratorOptions.NodeVersion;
+                // Explicitly specified version by user wins over detected version
+                if (!string.IsNullOrEmpty(_nodeScriptGeneratorOptions.NodeVersion))
+                {
+                    return _nodeScriptGeneratorOptions.NodeVersion;
+                }
+
+                // If a version was detected, then use it.
+                if (nodePlatformDetectorResult.PlatformVersion != null)
+                {
+                    return nodePlatformDetectorResult.PlatformVersion;
+                }
+
+                // Fallback to default version
+                var versionInfo = _nodeVersionProvider.GetVersionInfo();
+                return versionInfo.DefaultVersion;
             }
 
-            // If a version was detected, then use it.
-            if (detectedVersion != null)
+            string GetYarnVersion()
             {
-                return detectedVersion;
-            }
+                // Explicitly specified version by user wins over detected version
+                if (!string.IsNullOrEmpty(_nodeScriptGeneratorOptions.YarnVersion))
+                {
+                    return _nodeScriptGeneratorOptions.YarnVersion;
+                }
 
-            // Fallback to default version
-            var versionInfo = _nodeVersionProvider.GetVersionInfo();
-            return versionInfo.DefaultVersion;
+                // If a version was detected, then use it.
+                if (nodePlatformDetectorResult.YarnVersion != null)
+                {
+                    return nodePlatformDetectorResult.YarnVersion;
+                }
+
+                // Fallback to default version
+                return YarnConstants.DefaultYarnVersion;
+            }
         }
     }
 }

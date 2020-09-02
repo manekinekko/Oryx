@@ -25,6 +25,7 @@ namespace Microsoft.Oryx.BuildScriptGeneratorCli
         public const string PostBuildCommand = "POST_BUILD_COMMAND";
         public const string DotNetVersion = "DOTNET_VERSION";
         public const string NodeVersion = "NODE_VERSION";
+        public const string YarnVersion = "YARN_VERSION";
         public const string CustomRunBuildCommand = "RUN_BUILD_COMMAND";
         public const string PythonVersion = "PYTHON_VERSION";
         public const string PhpVersion = "PHP_VERSION";

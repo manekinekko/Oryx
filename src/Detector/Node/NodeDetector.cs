@@ -93,40 +93,36 @@ namespace Microsoft.Oryx.Detector.Node
                 return null;
             }
 
-            var version = GetVersion(context);
+            var packageJson = GetPackageJsonObject(context.SourceRepo);
+            var nodeVersion = packageJson?.engines?.node?.Value as string;
+            if (nodeVersion == null)
+            {
+                _logger.LogDebug($"Could not get Node version from {NodeConstants.PackageJsonFileName}.");
+            }
+
+            var yarnVersion = packageJson?.engines?.yarn?.Value as string;
+            if (yarnVersion == null)
+            {
+                _logger.LogDebug($"Could not get Yarn version from {NodeConstants.PackageJsonFileName}.");
+            }
+
             IEnumerable<FrameworkInfo> detectedFrameworkInfos = null;
             if (!_options.DisableFrameworkDetection)
             {
-                detectedFrameworkInfos = DetectFrameworkInfos(context);
+                detectedFrameworkInfos = DetectFrameworkInfos(context, packageJson);
             }
 
             return new NodePlatformDetectorResult
             {
                 Platform = NodeConstants.PlatformName,
-                PlatformVersion = version,
+                PlatformVersion = nodeVersion,
                 AppDirectory = appDirectory,
                 Frameworks = detectedFrameworkInfos,
+                YarnVersion = yarnVersion,
             };
         }
 
-        private string GetVersion(DetectorContext context)
-        {
-            var version = GetVersionFromPackageJson(context);
-            if (version != null)
-            {
-                return version;
-            }
-            _logger.LogDebug("Could not get version from package Json.");
-            return null;
-        }
-
-        private string GetVersionFromPackageJson(DetectorContext context)
-        {
-            var packageJson = GetPackageJsonObject(context.SourceRepo, _logger);
-            return packageJson?.engines?.node?.Value as string;
-        }
-
-        private dynamic GetPackageJsonObject(ISourceRepo sourceRepo, ILogger logger)
+        private dynamic GetPackageJsonObject(ISourceRepo sourceRepo)
         {
             dynamic packageJson = null;
             try
@@ -137,7 +133,7 @@ namespace Microsoft.Oryx.Detector.Node
             {
                 // Leave malformed package.json files for Node.js to handle.
                 // This prevents Oryx from erroring out when Node.js itself might be able to tolerate the file.
-                logger.LogWarning(
+                _logger.LogWarning(
                     exc,
                     $"Exception caught while trying to deserialize {NodeConstants.PackageJsonFileName.Hash()}");
             }
@@ -151,10 +147,9 @@ namespace Microsoft.Oryx.Detector.Node
             return JsonConvert.DeserializeObject(jsonContent);
         }
 
-        private IEnumerable<FrameworkInfo> DetectFrameworkInfos(DetectorContext context)
+        private IEnumerable<FrameworkInfo> DetectFrameworkInfos(DetectorContext context, dynamic packageJson)
         {
             var detectedFrameworkResult = new List<FrameworkInfo>();
-            var packageJson = GetPackageJsonObject(context.SourceRepo, _logger);
             if (packageJson?.devDependencies != null)
             {
                 var devDependencyObject = packageJson?.devDependencies;
@@ -169,7 +164,7 @@ namespace Microsoft.Oryx.Detector.Node
                             FrameworkVersion = devDependencyObject[keyword].Value as string
                         };
                         detectedFrameworkResult.Add(frameworkInfo);
-                    } 
+                    }
                     catch (RuntimeBinderException)
                     {
                     }
@@ -197,7 +192,8 @@ namespace Microsoft.Oryx.Detector.Node
                 }
             }
 
-            if (context.SourceRepo.FileExists(NodeConstants.FlutterYamlFileName)) {
+            if (context.SourceRepo.FileExists(NodeConstants.FlutterYamlFileName))
+            {
                 var frameworkInfo = new FrameworkInfo
                 {
                     Framework = NodeConstants.FlutterFrameworkeName,

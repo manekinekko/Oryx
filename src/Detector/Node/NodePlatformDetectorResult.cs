@@ -17,5 +17,10 @@ namespace Microsoft.Oryx.Detector.Node
         /// Gets or sets a list of detected framework information of an application.
         /// </summary>
         public IEnumerable<FrameworkInfo> Frameworks { get; set; }
+
+        /// <summary>
+        /// Gets or sets the version of Yarn that was detected.
+        /// </summary>
+        public string YarnVersion { get; set; }
     }
 }

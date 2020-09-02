@@ -22,6 +22,7 @@ namespace Microsoft.Oryx.BuildScriptGeneratorCli.Options
         public void Configure(NodeScriptGeneratorOptions options)
         {
             options.NodeVersion = GetStringValue(SettingsKeys.NodeVersion);
+            options.YarnVersion = GetStringValue(SettingsKeys.YarnVersion);
             options.CustomRunBuildCommand = GetStringValue(SettingsKeys.CustomRunBuildCommand);
             options.PruneDevDependencies = GetBooleanValue(SettingsKeys.PruneDevDependencies);
             options.NpmRegistryUrl = GetStringValue(SettingsKeys.NpmRegistryUrl);

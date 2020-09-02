@@ -16,6 +16,7 @@ namespace Microsoft.Oryx.BuildScriptGenerator
             services.TryAddEnumerable(
                 ServiceDescriptor.Singleton<IProgrammingPlatform, NodePlatform>());
             services.AddSingleton<INodeVersionProvider, NodeVersionProvider>();
+            services.AddSingleton<YarnInstaller>();
             services.AddSingleton<NodePlatformInstaller>();
             services.AddSingleton<NodeOnDiskVersionProvider>();
             services.AddSingleton<NodeSdkStorageVersionProvider>();
