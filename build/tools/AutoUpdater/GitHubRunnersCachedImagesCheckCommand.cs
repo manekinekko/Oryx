@@ -22,6 +22,12 @@ namespace AutoUpdater
         [DirectoryExists]
         public string SourceDir { get; set; }
 
+        [Option(
+            "--buildpack-deps-stretch-digest <digest>",
+            CommandOptionType.SingleValue,
+            Description = "The buildpack-deps:stretch image's digest.")]
+        public string GitHubRunnerBuildpackDepsStretchDigest { get; set; }
+
         public int OnExecute(CommandLineApplication app, IConsole console)
         {
             string sourceDir = null;
@@ -39,16 +45,18 @@ namespace AutoUpdater
                 throw new DirectoryNotFoundException($"Could not find directory '{sourceDir}'.");
             }
 
-            var gitHubRunnersReadMeDigest = GetDigestFromGitHubRunnersReadMe();
-            var oryxDockerfileDigest = GetDigestFromOryxGitHubRunnersDockerfile();
-
-            if (string.IsNullOrEmpty(gitHubRunnersReadMeDigest))
+            if (string.IsNullOrEmpty(GitHubRunnerBuildpackDepsStretchDigest))
             {
-                console.Error.WriteLine("GitHub runners digest is empty.");
+                console.Error.WriteLine("buildpack-deps:stretch digest is required.");
+                app.ShowHelp();
                 return 1;
             }
 
-            if (string.Equals(gitHubRunnersReadMeDigest, oryxDockerfileDigest, StringComparison.OrdinalIgnoreCase))
+            var oryxDockerfileDigest = GetDigestFromOryxGitHubRunnersDockerfile();
+            if (string.Equals(
+                GitHubRunnerBuildpackDepsStretchDigest,
+                oryxDockerfileDigest,
+                StringComparison.OrdinalIgnoreCase))
             {
                 console.WriteLine("Digests match. Skipping further action...");
                 return 0;
@@ -56,7 +64,7 @@ namespace AutoUpdater
 
             console.WriteLine("Digests do not match. Creating a pull requesting in upstream branch...");
 
-            var newContentInDockerfile = $"FROM buildpack-deps:stretch@sha256:{gitHubRunnersReadMeDigest}";
+            var newContentInDockerfile = $"FROM buildpack-deps:stretch@sha256:{GitHubRunnerBuildpackDepsStretchDigest}";
             var dockerFileLocation = Path.Combine(
                 sourceDir,
                 "images",
@@ -64,10 +72,12 @@ namespace AutoUpdater
                 "Dockerfiles",
                 "gitHubRunners.BuildPackDepsStretch.Dockerfile");
 
-            var buildNumber = Environment.GetEnvironmentVariable("BUILD_BUILDNUMBER");
-            var newBranchName = $"autoupdater/update.githubrunners.digest.{buildNumber}";
+            var uniqueBranchId = Environment.GetEnvironmentVariable("BRANCH_ID_SUFFIX_FOR_PULL_REQUEST");
+            var newBranchName = $"autoupdater/update.githubrunners.digest.{uniqueBranchId}";
             var forkAccountName = Environment.GetEnvironmentVariable("FORK_ACCOUNT_NAME");
             var accessToken = Environment.GetEnvironmentVariable("AUTOUPDATE_PAT");
+
+            var userInfo = string.IsNullOrEmpty(accessToken) ? string.Empty : $"-u {forkAccountName}:{accessToken}";
 
             var prDescription = PullRequestHelper.GetDescriptionForCreatingPullRequest(newBranchName);
             var scriptBuilder = new ShellScriptBuilder(cmdSeparator: Environment.NewLine)
@@ -83,7 +93,7 @@ namespace AutoUpdater
                 .AddCommand($"git add {dockerFileLocation}")
                 .AddCommand($"git commit -m 'Updated GitHub runners digest sha'")
                 .AddCommand($"git push -u origin {newBranchName}")
-                .AddCommand($"curl -u {forkAccountName}:{accessToken} -X POST " +
+                .AddCommand($"curl {userInfo} -X POST " +
                 $"-H 'Accept: application/vnd.github.v3+json' " +
                 $"https://api.github.com/repos/microsoft/oryx/pulls -d " +
                 @$"'{{""title"":""Updated GitHub runners digest"",""head"":""{forkAccountName}:{newBranchName}"",""base"":""master"",""body"":""{prDescription}""}}'");
@@ -120,12 +130,6 @@ namespace AutoUpdater
 
             console.WriteLine("Done.");
             return exitCode;
-        }
-
-        private string GetDigestFromGitHubRunnersReadMe()
-        {
-            var url = "https://raw.githubusercontent.com/actions/virtual-environments/main/images/linux/Ubuntu2004-README.md";
-            return GetImageDigest(url);
         }
 
         private string GetDigestFromOryxGitHubRunnersDockerfile()
