@@ -11,6 +11,7 @@ if [ -z "$PIP_INSTALL_CACHE_SETTINGS" ]
 then
 	PIP_INSTALL_CACHE_SETTINGS="--cache-dir $PIP_CACHE_DIR"
 fi
+echo "Pip install cache settings: $PIP_INSTALL_CACHE_SETTINGS"
 
 {{ if VirtualEnvironmentName | IsNotBlank }}
 	{{ if PackagesDirectory | IsNotBlank }}
