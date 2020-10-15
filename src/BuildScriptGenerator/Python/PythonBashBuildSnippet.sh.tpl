@@ -7,6 +7,11 @@ if [ ! -d "$PIP_CACHE_DIR" ];then
 	mkdir -p $PIP_CACHE_DIR
 fi
 
+if [ -z "$PIP_INSTALL_CACHE_SETTINGS" ]
+then
+	PIP_INSTALL_CACHE_SETTINGS="--cache-dir $PIP_CACHE_DIR"
+fi
+
 {{ if VirtualEnvironmentName | IsNotBlank }}
 	{{ if PackagesDirectory | IsNotBlank }}
 		if [ -d "{{ PackagesDirectory }}" ]
@@ -31,7 +36,7 @@ fi
 	if [ -e "requirements.txt" ]
 	then
 		echo "Running pip install..."
-		python -m pip install --cache-dir $PIP_CACHE_DIR --prefer-binary -r requirements.txt | ts $TS_FMT
+		python -m pip install $PIP_INSTALL_CACHE_SETTINGS --prefer-binary -r requirements.txt | ts $TS_FMT
 		pipInstallExitCode=${PIPESTATUS[0]}
 		if [[ $pipInstallExitCode != 0 ]]
 		then
@@ -42,7 +47,7 @@ fi
 		echo "Running python setup.py install..."
 		$python setup.py install --user| ts $TS_FMT
 		cd *.egg-info
-		python -m pip install --cache-dir $PIP_CACHE_DIR --prefer-binary -r requires.txt | ts $TS_FMT
+		python -m pip install $PIP_INSTALL_CACHE_SETTINGS --prefer-binary -r requires.txt | ts $TS_FMT
 
 		pythonBuildExitCode=${PIPESTATUS[0]}
 		if [[ $pythonBuildExitCode != 0 ]]
@@ -61,7 +66,7 @@ fi
 		echo
 		echo Running pip install...
 		START_TIME=$SECONDS
-		$python -m pip install --cache-dir $PIP_CACHE_DIR --prefer-binary -r requirements.txt --target="{{ PackagesDirectory }}" --upgrade | ts $TS_FMT
+		$python -m pip install $PIP_INSTALL_CACHE_SETTINGS --prefer-binary -r requirements.txt --target="{{ PackagesDirectory }}" --upgrade | ts $TS_FMT
 		pipInstallExitCode=${PIPESTATUS[0]}
 		ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		echo "Done in $ELAPSED_TIME sec(s)."
@@ -81,7 +86,7 @@ fi
 		echo "Running python setup.py install..."
 		$python setup.py install --user| ts $TS_FMT
 		cd *.egg-info
-		$python -m pip install --cache-dir $PIP_CACHE_DIR --prefer-binary -r requires.txt | ts $TS_FMT
+		$python -m pip install $PIP_INSTALL_CACHE_SETTINGS --prefer-binary -r requires.txt | ts $TS_FMT
 		pythonBuildExitCode=${PIPESTATUS[0]}
 		if [[ $pythonBuildExitCode != 0 ]]
 		then
