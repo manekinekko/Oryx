@@ -22,12 +22,14 @@ namespace Microsoft.Oryx.Integration.Tests
         }
 
         [Theory]
-        [InlineData("2.1", NetCoreApp21WebApp, "Hello World!")]
-        [InlineData("3.1", NetCoreApp31MvcApp, "Welcome to ASP.NET Core MVC!")]
+        [InlineData("2.1", NetCoreApp21WebApp, "Hello World!", "2.1")]
+        [InlineData("3.1", NetCoreApp31MvcApp, "Welcome to ASP.NET Core MVC!", "3.1")]
+        [InlineData("3.1", NetCoreApp31MvcApp, "Welcome to ASP.NET Core MVC!", "dynamic")]
         public async Task CanBuildAndRun_NetCore31WebApp(
             string runtimeVersion,
             string appName,
-            string expectedResponseContent)
+            string expectedResponseContent,
+            string runtimeImageTag)
         {
             // Arrange
             var hostDir = Path.Combine(_hostSamplesDir, "DotNetCore", appName);
@@ -59,7 +61,7 @@ namespace Microsoft.Oryx.Integration.Tests
                     "-c",
                     buildImageScript
                 },
-                _imageHelper.GetRuntimeImage("dotnetcore", runtimeVersion),
+                _imageHelper.GetRuntimeImage("dotnetcore", runtimeImageTag),
                 ContainerPort,
                 "/bin/sh",
                 new[]
