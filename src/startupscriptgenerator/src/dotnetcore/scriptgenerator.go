@@ -7,6 +7,7 @@ package main
 
 import (
 	"common"
+	"common/consts"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -44,8 +45,8 @@ func (gen *DotnetCoreStartupScriptGenerator) GenerateEntrypointScript(scriptBuil
 	}
 
 	dotnetBinary := "/usr/share/dotnet/dotnet"
-
-	if gen.Configuration.EnableDynamicInstall && !common.PathExists(dotnetBinary) {
+	enableDynamicInstall := common.GetBooleanEnvironmentVariable(consts.EnableDynamicInstallKey)
+	if enableDynamicInstall && !common.PathExists(dotnetBinary) {
 		scriptBuilder.WriteString(fmt.Sprintf("oryx setupEnv -appPath %s\n", appPath))
 	}
 

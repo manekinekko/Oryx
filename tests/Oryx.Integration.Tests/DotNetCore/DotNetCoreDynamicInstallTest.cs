@@ -45,6 +45,7 @@ namespace Microsoft.Oryx.Integration.Tests
                .ToString();
             var runtimeImageScript = new ShellScriptBuilder()
                 .AddDefaultTestEnvironmentVariables()
+                .SetEnvironmentVariable(SettingsKeys.EnableDynamicInstall, true.ToString())
                 .AddCommand(
                 $"oryx create-script -appPath {appOutputDir} -bindPort {ContainerPort}")
                 .AddCommand(DefaultStartupFilePath)
