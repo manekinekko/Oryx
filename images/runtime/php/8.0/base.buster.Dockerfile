@@ -68,6 +68,7 @@ RUN docker-php-ext-configure pdo_odbc --with-pdo-odbc=unixODBC,/usr \
         pdo_odbc \
 # deprecated from 7.4, so should be avoided in general template for all php versions
 #       wddx \
+#       xmlrpc \
         xsl \
     && pecl install imagick && docker-php-ext-enable imagick \
     && pecl install mongodb && docker-php-ext-enable mongodb
